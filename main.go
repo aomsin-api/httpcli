@@ -16,8 +16,6 @@ import (
 )
 
 var (
-	query, header []string
-
 	rootCmd = &cobra.Command{
 		Use:   "httpcli",
 		Short: "",
@@ -27,166 +25,198 @@ var (
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
-				log.Fatalln("Please enter url")
+				fmt.Println("Please enter url")
+			} else {
+				header, err := cmd.Flags().GetStringSlice("header")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				get(args[0], header)
 			}
-			get(args[0])
 		},
 	}
-)
 
-func getCmd() *cobra.Command {
-	var get = &cobra.Command{
+	getCmd = &cobra.Command{
 		Use:   "get",
 		Short: "Get information",
 		Long: `Get information from url by using command
 		get <URL>`,
-		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			get(args[0])
-			if len(query) > 0 {
-				addQuery(args[0])
+			if len(args) == 0 {
+				fmt.Println("Please Enter url")
+			} else {
+				header, err := cmd.Flags().GetStringSlice("header")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				get(args[0], header)
+				query, err := cmd.Flags().GetStringSlice("query")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				if len(query) > 0 {
+					addQuery(args[0], query)
+				}
 			}
 		},
 	}
 
-	return get
-}
-
-func postCmd() *cobra.Command {
-	var postBody string
-	var postCmd = &cobra.Command{
+	postCmd = &cobra.Command{
 		Use:   "post",
 		Short: "Post information",
 		Long: `Post information by using command
 		post <URL> --json '{ "key": "value" }'`,
-		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			url := args[0]
-			json_body := []byte(postBody)
-			req, err := http.NewRequest("POST", url, bytes.NewBuffer(json_body))
-			if err != nil {
-				log.Fatalln(err)
-			}
-			req.Header.Set("Content-Type", "application/json")
+			if len(args) == 0 {
+				fmt.Println("Please Enter url")
+			} else {
+				url := args[0]
+				postBody, err := cmd.Flags().GetString("json")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				json_body := []byte(postBody)
 
-			client := &http.Client{
-				Timeout: 10 * time.Second,
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			defer resp.Body.Close()
-			Body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatalln(err)
-			}
+				req, err := http.NewRequest("POST", url, bytes.NewBuffer(json_body))
+				if err != nil {
+					log.Fatalln(err)
+				}
+				req.Header.Set("Content-Type", "application/json")
 
-			res, err := prettyString(string(Body))
-			if err != nil {
-				log.Fatalln(err)
-			}
+				client := &http.Client{
+					Timeout: 10 * time.Second,
+				}
+				resp, err := client.Do(req)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				defer resp.Body.Close()
+				Body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Fatalln(err)
+				}
 
-			fmt.Println(res)
-			if len(query) > 0 {
-				addQuery(args[0])
+				res, err := prettyString(string(Body))
+				if err != nil {
+					log.Fatalln(err)
+				}
+
+				fmt.Println(res)
+
+				query, err := cmd.Flags().GetStringSlice("query")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				if len(query) > 0 {
+					addQuery(args[0], query)
+				}
+
 			}
 		},
 	}
 
-	postCmd.Flags().StringVar(&postBody, "json", "", "Enter json body")
-	return postCmd
-}
-
-func deleteCmd() *cobra.Command {
-	var deleteCmd = &cobra.Command{
+	deleteCmd = &cobra.Command{
 		Use:   "delete",
 		Short: "Delete information",
 		Long: `Delete information in the url by using command
 		delete <URL>`,
-		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			url := args[0]
-			req, err := http.NewRequest("DELETE", url, nil)
-			if err != nil {
-				log.Fatalln(err)
+			if len(args) == 0 {
+				fmt.Println("Please Enter url")
+			} else {
+				url := args[0]
+				req, err := http.NewRequest("DELETE", url, nil)
+				if err != nil {
+					log.Fatalln(err)
+				}
+
+				client := &http.Client{
+					Timeout: 10 * time.Second,
+				}
+				resp, err := client.Do(req)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				fmt.Println("Status: ", http.StatusText(resp.StatusCode))
+				defer resp.Body.Close()
+
+				query, err := cmd.Flags().GetStringSlice("query")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				if len(query) > 0 {
+					addQuery(args[0], query)
+				}
+
 			}
 
-			client := &http.Client{
-				Timeout: 10 * time.Second,
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			fmt.Println("Status: ", http.StatusText(resp.StatusCode))
-			defer resp.Body.Close()
-
-			if len(query) > 0 {
-				addQuery(args[0])
-			}
 		},
 	}
 
-	return deleteCmd
-}
-
-func putCmd() *cobra.Command {
-	var putBody string
-	var putCmd = &cobra.Command{
+	putCmd = &cobra.Command{
 		Use:   "put",
 		Short: "Put updated information",
 		Long: `Put an updated information to the url by using command
 		put <url> --json "{ 'key': 'value' }"`,
-		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			url := args[0]
-			json_body := []byte(putBody)
+			if len(args) == 0 {
+				fmt.Println("Please Enter url")
+			} else {
+				url := args[0]
+				putBody, err := cmd.Flags().GetString("json")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				jsonBody := []byte(putBody)
 
-			req, err := http.NewRequest("PUT", url, bytes.NewBuffer(json_body))
-			if err != nil {
-				log.Fatalln(err)
-			}
-			req.Header.Set("Content-Type", "application/json")
+				req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
+				if err != nil {
+					log.Fatalln(err)
+				}
+				req.Header.Set("Content-Type", "application/json")
 
-			client := &http.Client{
-				Timeout: 10 * time.Second,
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			defer resp.Body.Close()
-			b, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatalln(err)
-			}
+				client := &http.Client{
+					Timeout: 10 * time.Second,
+				}
+				resp, err := client.Do(req)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				defer resp.Body.Close()
 
-			res, err := prettyString(string(b))
-			if err != nil {
-				log.Fatalln(err)
-			}
+				Body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Fatalln(err)
+				}
 
-			fmt.Println(res)
+				res, err := prettyString(string(Body))
+				if err != nil {
+					log.Fatalln(err)
+				}
 
-			if len(query) > 0 {
-				addQuery(args[0])
+				fmt.Println(res)
+
+				query, err := cmd.Flags().GetStringSlice("query")
+				if err != nil {
+					log.Fatalln(err)
+				}
+				if len(query) > 0 {
+					addQuery(args[0], query)
+				}
+
 			}
 		},
 	}
+)
 
-	putCmd.Flags().StringVarP(&putBody, "json", "", "", "Enter json boy")
-	return putCmd
-}
-
-func addHeader(r *http.Request) {
+func addHeader(header []string, r *http.Request) {
 	for i := 0; i < len(header); i++ {
-		header := strings.Split(header[i], "=")
-		r.Header.Add(header[0], header[1])
+		h := strings.Split(header[i], "=")
+		r.Header.Add(h[0], h[1])
 	}
 }
 
-func addQuery(str string) {
+func addQuery(str string, query []string) {
 	u, err := url.Parse(str)
 	if err != nil {
 		log.Fatalln(err)
@@ -197,8 +227,8 @@ func addQuery(str string) {
 		log.Fatalln(err)
 	}
 	for i := 0; i < len(query); i++ {
-		header := strings.Split(query[i], "=")
-		q.Add(header[0], header[1])
+		qu := strings.Split(query[i], "=")
+		q.Add(qu[0], qu[1])
 	}
 
 	u.RawQuery = q.Encode()
@@ -207,17 +237,19 @@ func addQuery(str string) {
 
 }
 
-func get(url string) {
+func get(url string, header []string) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	if len(header) > 0 {
-		addHeader(req)
+		addHeader(header, req)
 	}
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalln(err)
@@ -247,13 +279,17 @@ func prettyString(str string) (string, error) {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringSliceVar(&query, "query", []string{}, "Query")
-	rootCmd.PersistentFlags().StringSliceVar(&header, "header", []string{}, "Header")
+	rootCmd.AddCommand(getCmd)
+	rootCmd.PersistentFlags().StringSlice("query", []string{}, "query")
+	rootCmd.PersistentFlags().StringSlice("header", []string{}, "header")
 
-	rootCmd.AddCommand(getCmd())
-	rootCmd.AddCommand(postCmd())
-	rootCmd.AddCommand(deleteCmd())
-	rootCmd.AddCommand(putCmd())
+	postCmd.Flags().String("json", "", "Post body")
+	rootCmd.AddCommand(postCmd)
+
+	rootCmd.AddCommand(deleteCmd)
+
+	putCmd.Flags().String("json", "", "Put body")
+	rootCmd.AddCommand(putCmd)
 }
 
 func main() {
