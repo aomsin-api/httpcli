@@ -67,15 +67,19 @@ var (
 		Long: `Post information by using command
 		post <URL> --json '{ "key": "value" }'`,
 		Run: func(cmd *cobra.Command, args []string) {
+			// Function is too long. You should break this function down to smaller functions.
+
 			if len(args) == 0 {
 				fmt.Println("Please Enter url")
 			} else {
+				// The else block is unneccessary.
 				url := args[0]
 				postBody, err := cmd.Flags().GetString("json")
 				if err != nil {
 					log.Fatalln(err)
 				}
-				json_body := []byte(postBody)
+
+				json_body := []byte(postBody) // Don't use underscore_case case in Golang. Please use camelCase instead.
 
 				req, err := http.NewRequest("POST", url, bytes.NewBuffer(json_body))
 				if err != nil {
@@ -209,6 +213,7 @@ var (
 	}
 )
 
+// Function should be named `addHeadersToRequest`
 func addHeader(header []string, r *http.Request) {
 	for i := 0; i < len(header); i++ {
 		h := strings.Split(header[i], "=")
@@ -216,7 +221,13 @@ func addHeader(header []string, r *http.Request) {
 	}
 }
 
+// This function doesn't return anything. The product of this function doesn't seem
+// to be used anywhere?
+//
+// Could u please clarify what this function does?
 func addQuery(str string, query []string) {
+	// Variable naming is hard to read.
+	// You should name variables meaningfully instead of using a single character.
 	u, err := url.Parse(str)
 	if err != nil {
 		log.Fatalln(err)
@@ -278,7 +289,10 @@ func prettyString(str string) (string, error) {
 	return prettyJSON.String(), nil
 }
 
+// init function should be at the top of the file.
 func init() {
+	// Group the same methods together.
+	// The way these statements are organized is a little hard to read.
 	rootCmd.AddCommand(getCmd)
 	rootCmd.PersistentFlags().StringSlice("query", []string{}, "query")
 	rootCmd.PersistentFlags().StringSlice("header", []string{}, "header")
